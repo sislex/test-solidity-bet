@@ -1,0 +1,23 @@
+{
+  "name": "test-solidity-bet",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "remixd -s . -u https://remix.ethereum.org",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sislex/test-solidity-bet.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/sislex/test-solidity-bet/issues"
+  },
+  "homepage": "https://github.com/sislex/test-solidity-bet#readme",
+  "dependencies": {
+    "@remix-project/remixd": "^0.6.48"
+  }
+}
