@@ -27,6 +27,11 @@ contract Game {
     mapping(address => uint256) private playerMap; // Хранит индексы игроков
     mapping(address => bool) public playerExists; // Отслеживает существование игрока
 
+    struct PlayerResult {
+        address wallet;
+        uint8 percent;
+    }
+
     event LogBet(address wallet, string name, uint256 bet);
     event BettingFinished();
 
@@ -39,7 +44,7 @@ contract Game {
         _playerList[0] = Player({
             name: "Alex",
             wallet: 0x5B38Da6a701c568545dCfcB03FcB875f56beddC4,
-            bet: 1,
+            bet: 1 ether,
             isPaid: false,
             result: 0
         });
@@ -47,7 +52,7 @@ contract Game {
         _playerList[1] = Player({
             name: "Max",
             wallet: 0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2,
-            bet: 2,
+            bet: 2 ether,
             isPaid: false,
             result: 0
         });
@@ -56,7 +61,7 @@ contract Game {
 
     function init(Player[] memory _playerList) private {
         owner = msg.sender;
-        bettingMaxTime = 1 minutes;
+        bettingMaxTime = 5 minutes;
         gameMaxTime = 30 minutes;
         createdAt = block.timestamp;
 
@@ -82,15 +87,15 @@ contract Game {
     }
 
     function getAllPlayers()
-    public
-    view
-    returns (
-        string[] memory names,
-        address[] memory wallets,
-        uint256[] memory bets,
-        bool[] memory isPaid,
-        uint256[] memory results
-    )
+        public
+        view
+        returns (
+            string[] memory names,
+            address[] memory wallets,
+            uint256[] memory bets,
+            bool[] memory isPaid,
+            uint256[] memory results
+        )
     {
         uint256 len = playerList.length;
 
@@ -113,17 +118,17 @@ contract Game {
     }
 
     function getAllData()
-    public
-    view
-    returns (
-        uint256 _bettingMaxTime, //30 minutes
-        uint256 _gameMaxTime, //1 minutes,
-        uint256 _createdAt,
-        uint256 _startedAt,
-        uint256 _finished,
-        bool _isBettingComplete, // if all bettors paid or not
-        bool _isGameAborted //if game was aborted by admin (or no one betted)
-    )
+        public
+        view
+        returns (
+            uint256 _bettingMaxTime, //30 minutes
+            uint256 _gameMaxTime, //1 minutes,
+            uint256 _createdAt,
+            uint256 _startedAt,
+            uint256 _finished,
+            bool _isBettingComplete, // if all bettors paid or not
+            bool _isGameAborted //if game was aborted by admin (or no one betted)
+        )
     {
         return (
             bettingMaxTime,
@@ -136,7 +141,7 @@ contract Game {
         );
     }
 
-    receive() external payable playerExist bettingTimeFinished  {
+    receive() external payable playerExist bettingTimeFinished {
         Player storage player = playerList[playerMap[msg.sender]];
 
         if (msg.value >= player.bet) {
@@ -148,7 +153,6 @@ contract Game {
         }
     }
 
-    // add function setBettingComplete is all players paid or betting time is over
     function setBettingComplete() private {
         bool _isBettingComplete = true;
         for (uint256 i = 0; i < playerList.length; ++i) {
@@ -160,13 +164,56 @@ contract Game {
         }
         if (!isBettingComplete && _isBettingComplete) {
             isBettingComplete = true;
-            startedAt = block.timestamp;
+            startedAt = block.timestamp; // Todo: need to change (Alex)
             emit BettingFinished();
         }
     }
 
     function getValueOnContract() public view returns (uint256 value) {
         return address(this).balance;
+    }
+
+    // function finish(PlayerResult[] memory _playerResultList) public payable {
+    //     fifnshTransaction(_playerResultList);
+    // }
+
+    function finish() public payable {
+        PlayerResult[] memory _playerResultList = new PlayerResult[](2);
+        _playerResultList[0] = PlayerResult({
+            wallet: 0x5B38Da6a701c568545dCfcB03FcB875f56beddC4,
+            percent: 45
+        });
+        _playerResultList[1] = PlayerResult({
+            wallet: 0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2,
+            percent: 45
+        });
+
+        fifnshTransaction(_playerResultList);
+        sendMoneyToOwner();
+    }
+
+    function sendMoneyToOwner() private {
+        payable(owner).transfer(address(this).balance);
+    }
+
+    function fifnshTransaction(PlayerResult[] memory _playerResultList)
+        private
+    {
+        uint balance = address(this).balance;
+        for (uint256 i = 0; i < _playerResultList.length; ++i) {
+            PlayerResult memory playerResult = _playerResultList[i];
+            uint256 index = playerMap[playerResult.wallet];
+            Player storage player = playerList[index];
+
+            uint256 result = 0;
+
+            if (playerResult.percent > 0) {
+                result = (balance * playerResult.percent) / 100;
+                payable(player.wallet).transfer(result);
+            }
+
+            player.result = result;
+        }
     }
 
     modifier onlyOwner() {
@@ -179,11 +226,10 @@ contract Game {
         _;
     }
 
-    // add modifier to check is betting time finished
     modifier bettingTimeFinished() {
         require(
             block.timestamp <= createdAt + bettingMaxTime,
-            "Betting time is finished yet"
+            "Betting time is finished"
         );
         _;
     }
