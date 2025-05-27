@@ -82,16 +82,15 @@ contract Game {
     }
 
     function getAllPlayers()
-        public
-        view
-        onlyOwner
-        returns (
-            string[] memory names,
-            address[] memory wallets,
-            uint256[] memory bets,
-            bool[] memory isPaid,
-            uint256[] memory results
-        )
+    public
+    view
+    returns (
+        string[] memory names,
+        address[] memory wallets,
+        uint256[] memory bets,
+        bool[] memory isPaid,
+        uint256[] memory results
+    )
     {
         uint256 len = playerList.length;
 
@@ -114,17 +113,17 @@ contract Game {
     }
 
     function getAllData()
-        public
-        view
-        returns (
-            uint256 _bettingMaxTime, //30 minutes
-            uint256 _gameMaxTime, //1 minutes,
-            uint256 _createdAt,
-            uint256 _startedAt,
-            uint256 _finished,
-            bool _isBettingComplete, // if all bettors paid or not
-            bool _isGameAborted //if game was aborted by admin (or no one betted)
-        )
+    public
+    view
+    returns (
+        uint256 _bettingMaxTime, //30 minutes
+        uint256 _gameMaxTime, //1 minutes,
+        uint256 _createdAt,
+        uint256 _startedAt,
+        uint256 _finished,
+        bool _isBettingComplete, // if all bettors paid or not
+        bool _isGameAborted //if game was aborted by admin (or no one betted)
+    )
     {
         return (
             bettingMaxTime,
@@ -137,14 +136,32 @@ contract Game {
         );
     }
 
-    receive() external payable playerExist {
+    receive() external payable playerExist bettingTimeFinished  {
         Player storage player = playerList[playerMap[msg.sender]];
 
         if (msg.value >= player.bet) {
             player.isPaid = true;
             emit LogBet(msg.sender, player.name, player.bet);
+            setBettingComplete();
         } else {
             revert("Not enough funds.");
+        }
+    }
+
+    // add function setBettingComplete is all players paid or betting time is over
+    function setBettingComplete() private {
+        bool _isBettingComplete = true;
+        for (uint256 i = 0; i < playerList.length; ++i) {
+            Player storage player = playerList[i];
+            if (!player.isPaid) {
+                _isBettingComplete = false;
+                break;
+            }
+        }
+        if (!isBettingComplete && _isBettingComplete) {
+            isBettingComplete = true;
+            startedAt = block.timestamp;
+            emit BettingFinished();
         }
     }
 
@@ -159,6 +176,15 @@ contract Game {
 
     modifier playerExist() {
         require(playerExists[msg.sender], "Player does not exist");
+        _;
+    }
+
+    // add modifier to check is betting time finished
+    modifier bettingTimeFinished() {
+        require(
+            block.timestamp <= createdAt + bettingMaxTime,
+            "Betting time is finished yet"
+        );
         _;
     }
 }
