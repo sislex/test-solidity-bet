@@ -4,12 +4,20 @@ import { Contract, ethers } from "ethers";
 const { time } = require("@nomicfoundation/hardhat-network-helpers");
 
 describe("GameStorage", function () {
+  let gameParentContract: Contract;
   let gameContract: Contract;
   let owner: any;
   let player1: any;
   let player2: any;
 
-  async function deployContract() {
+  async function deployParentContract() {
+    const GameFactory = await hre.ethers.getContractFactory("GameLogic");
+    // @ts-ignore
+    gameParentContract = await GameFactory.deploy();
+    await gameParentContract.waitForDeployment();
+  }
+
+  async function deployContract1() {
     [owner, player1, player2] = await hre.ethers.getSigners();
 
     const playerList = [
@@ -37,9 +45,12 @@ describe("GameStorage", function () {
     await gameContract.waitForDeployment();
   }
 
+
+
   describe("Deployment", function () {
     beforeEach(async () => {
-      await deployContract();
+      await deployParentContract();
+      await deployContract1();
     });
 
 
@@ -58,28 +69,26 @@ describe("GameStorage", function () {
 
     // Время ставок должно быть установлено в 5 минут
     it("should set correct betting max time (5 minutes)", async function () {
-      const bettingMaxTime = await gameContract.bettingMaxTime();
+      const [bettingMaxTime, gameMaxTime, createdAt, startedAt, finishedAt, isBettingComplete, isGameAborted] = await gameContract.getAllData();
       expect(bettingMaxTime).to.equal(5 * 60);
     });
 
     // Максимальное время игры должно быть 30 минут
     it("should set correct game max time (30 minutes)", async function () {
-      const gameMaxTime = await gameContract.gameMaxTime();
+      const [bettingMaxTime, gameMaxTime, createdAt, startedAt, finishedAt, isBettingComplete, isGameAborted] = await gameContract.getAllData();
       expect(gameMaxTime).to.equal(30 * 60);
     });
 
     // Владелец контракта должен быть установлен правильно
     it("should set correct owner", async function () {
-      const contractOwner = await gameContract.owner();
+      const contractOwner = await gameContract.getOwner();
       expect(contractOwner).to.equal(owner.address);
     });
 
     // Время создания должно быть задано
     it("should set createdAt timestamp", async function () {
-      const createdAt = await gameContract.createdAt();
+      const [bettingMaxTime, gameMaxTime, createdAt, startedAt, finishedAt, isBettingComplete, isGameAborted] = await gameContract.getAllData();
       expect(createdAt).to.not.equal(0);
-
-
       const currentTime = Math.floor(Date.now() / 1000);
       expect(createdAt).to.be.closeTo(currentTime, 5);
     });
@@ -141,8 +150,7 @@ describe("GameStorage", function () {
 
     // Отклоняет ставку после окончания времени ставок
     it("should reject bet after betting time is over", async function () {
-      const createdAt = await gameContract.createdAt();
-      const bettingMaxTime = await gameContract.bettingMaxTime();
+      const [bettingMaxTime, gameMaxTime, createdAt, startedAt, finishedAt, isBettingComplete, isGameAborted] = await gameContract.getAllData();
 
       await time.increaseTo(
         createdAt + bettingMaxTime + BigInt(1)
@@ -163,19 +171,21 @@ describe("GameStorage", function () {
     // Отклоняет ставку, если все игроки уже поставили
     it("should reject bet when all players have already bet", async function () {
       // Заново деплоим чистый контракт
-      await deployContract();
+      await deployContract1();
 
       const [,, bets] = await gameContract.getAllPlayers();
 
-      await player1.sendTransaction({
+      const tx1 = await player1.sendTransaction({
         to: gameContract.target,
         value: bets[0],
       });
+      await tx1.wait();
 
-      await player2.sendTransaction({
+      const tx2 =  await player2.sendTransaction({
         to: gameContract.target,
         value: bets[1],
       });
+      await tx2.wait();
 
       await expect(
         player2.sendTransaction({
@@ -187,7 +197,7 @@ describe("GameStorage", function () {
 
     // Отклоняет ставку от несуществующего игрока
     it("should reject bet from non-existing player", async function () {
-      await deployContract();
+      await deployContract1();
       const [, , , ,nonPlayer] = await hre.ethers.getSigners();
 
 
@@ -223,84 +233,92 @@ describe("GameStorage", function () {
 
     // Проверяем, что isBettingComplete становится true, когда все игроки оплатили
     it("should set isBettingComplete to true when all players have paid", async function () {
-      await deployContract();
+      await deployContract1();
+      let [bettingMaxTime, gameMaxTime, createdAt, startedAt, finishedAt, isBettingComplete, isGameAborted] = await gameContract.getAllData();
+      expect(isBettingComplete).to.be.false;
 
-      expect(await gameContract.isBettingComplete()).to.be.false;
 
       const [names, wallets, bets] = await gameContract.getAllPlayers();
 
-      await player1.sendTransaction({
+      const tx1 = await player1.sendTransaction({
         to: gameContract.target,
         value: bets[0],
       });
+      await tx1.wait(); // wait transaction to be mined
 
-      expect(await gameContract.isBettingComplete()).to.be.false;
+      [bettingMaxTime, gameMaxTime, createdAt, startedAt, finishedAt, isBettingComplete, isGameAborted] = await gameContract.getAllData();
+      expect(isBettingComplete).to.be.false;
 
-      await player2.sendTransaction({
+      const tx2 =   await player2.sendTransaction({
         to: gameContract.target,
         value: bets[1],
       });
-
-      expect(await gameContract.isBettingComplete()).to.be.true;
+      await tx2.wait(); // wait transaction to be mined
+      [bettingMaxTime, gameMaxTime, createdAt, startedAt, finishedAt, isBettingComplete, isGameAborted] = await gameContract.getAllData();
+      expect(isBettingComplete).to.be.true;
     });
 
     // Проверяем, что startedAt устанавливается когда все игроки сделали ставки
     it("should set startedAt when all players have paid", async function () {
-      await deployContract();
-      expect(await gameContract.startedAt()).to.equal(0);
+      await deployContract1();
+
+      let [bettingMaxTime, gameMaxTime, createdAt, startedAt, finishedAt, isBettingComplete, isGameAborted] = await gameContract.getAllData();
+      expect(startedAt).to.equal(0);
 
       const [,, bets] = await gameContract.getAllPlayers();
 
-      const timeBeforeBets = await time.latest();
-
-      await player1.sendTransaction({
+      const tx1 = await player1.sendTransaction({
         to: gameContract.target,
         value: bets[0],
       });
+      await tx1.wait(); // wait transaction to be mined
 
-      expect(await gameContract.startedAt()).to.equal(0);
+      [bettingMaxTime, gameMaxTime, createdAt, startedAt, finishedAt, isBettingComplete, isGameAborted] = await gameContract.getAllData();
+      expect(startedAt).to.equal(0);
 
-      const tx = await player2.sendTransaction({
+      const tx2 = await player2.sendTransaction({
         to: gameContract.target,
         value: bets[1],
       });
 
-      const txReceipt = await tx.wait();
+      await tx2.wait(); // wait transaction to be mined
       const expectedStartedAt = await time.latest();
 
       // Проверяем, что startedAt установился
-      const startedAt = await gameContract.startedAt();
+      [bettingMaxTime, gameMaxTime, createdAt, startedAt, finishedAt, isBettingComplete, isGameAborted] = await gameContract.getAllData();
       expect(startedAt).to.not.equal(0);
       expect(startedAt).to.equal(expectedStartedAt);
     });
 
     // Проверяем, что startedAt не устанавливается, если не все игроки сделали ставки
     it("should not set startedAt if not all players have paid", async function () {
-      await deployContract();
+      await deployContract1();
 
       const [,, bets] = await gameContract.getAllPlayers();
 
-      await player1.sendTransaction({
+      const tx1 = await player1.sendTransaction({
         to: gameContract.target,
         value: bets[0],
       });
+      await tx1.wait(); // wait transaction to be mined
 
-      const createdAt = await gameContract.createdAt();
-      const bettingMaxTime = await gameContract.bettingMaxTime();
+      let [bettingMaxTime, gameMaxTime, createdAt, startedAt, finishedAt, isBettingComplete, isGameAborted] = await gameContract.getAllData();
       await time.increaseTo(createdAt + bettingMaxTime + BigInt(1));
 
-      expect(await gameContract.startedAt()).to.equal(0);
+      expect(startedAt).to.equal(0);
     });
 
   });
 
-  describe("Force finish by time", function () {
-    beforeEach(async function () {
-      await deployContract();
-      const [,, bets] = await gameContract.getAllPlayers();
-      await player1.sendTransaction({ to: gameContract.target, value: bets[0] });
-      await player2.sendTransaction({ to: gameContract.target, value: bets[1] });
-    });
-  });
+  // describe("Force finish by time", function () {
+  //   beforeEach(async function () {
+  //     await deployContract1();
+  //     const [,, bets] = await gameContract.getAllPlayers();
+  //     const tx1 = await player1.sendTransaction({ to: gameContract.target, value: bets[0] });
+  //     await tx1.wait(); // wait transaction to be mined
+  //     const tx2 = await player2.sendTransaction({ to: gameContract.target, value: bets[1] });
+  //     await tx2.wait(); // wait transaction to be mined
+  //   });
+  // });
 
 });
