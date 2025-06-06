@@ -32,6 +32,8 @@ contract DelegatecallGameStorageBase {
     mapping(address => uint256) internal playerMap;
     mapping(address => bool) internal playerExists;
 
+    address internal logicAddr;
+
     event LogBet(address indexed wallet, string name, uint256 bet);
     event BettingFinished();
     event GameFinalized(uint256 timestamp);
@@ -66,7 +68,7 @@ contract DelegatecallGameStorageBase {
         _;
     }
 
-    modifier validLogicAddress(address logicAddr) {
+    modifier validLogicAddress() {
         require(logicAddr != address(0), "Invalid logic contract address");
         _;
     }
@@ -96,9 +98,10 @@ contract DelegatecallGameStorageBase {
         _;
     }
 
-    function _init(Player[] memory _playerList) internal {
+    function _init(Player[] memory _playerList, address _logicAddr) internal {
         owner = msg.sender;
         createdAt = block.timestamp;
+        logicAddr = _logicAddr;
 
         for (uint256 i = 0; i < _playerList.length; ++i) {
             require(!playerExists[_playerList[i].wallet], "Player already exists");
@@ -117,8 +120,8 @@ contract DelegatecallGameStorageBase {
         }
     }
 
-    function _updateBettingStatus(address logicAddr) internal 
-        validLogicAddress(logicAddr)
+    function _updateBettingStatus() internal 
+        validLogicAddress
         gameNotFinished
         gameNotAborted
     {
@@ -140,8 +143,8 @@ contract DelegatecallGameStorageBase {
         }
     }
 
-    function _finish(PlayerResult[] memory _playerResultList, address logicAddr) internal 
-        validLogicAddress(logicAddr)
+    function _finish(PlayerResult[] memory _playerResultList) internal 
+        validLogicAddress
         onlyOwner
         gameNotFinished
         bettingCompleted

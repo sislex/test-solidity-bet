@@ -43,7 +43,7 @@ describe("DelegatecallGame", function () {
                 result: 0n
             }
         ];
-        gameStorage = await GameStorage.deploy(playerList);
+        gameStorage = await GameStorage.deploy(playerList, await gameLogic.getAddress());
     });
 
     describe("Initialization", function () {
@@ -118,13 +118,13 @@ describe("DelegatecallGame", function () {
             });
 
             // Завершаем игру
-            await gameStorage.updateBettingStatus(await gameLogic.getAddress());
+            await gameStorage.updateBettingStatus();
             const playerResults = [
                 { wallet: player1.address, percent: 20 },
                 { wallet: player2.address, percent: 30 },
                 { wallet: player3.address, percent: 50 }
             ];
-            await gameStorage.finish(playerResults, await gameLogic.getAddress());
+            await gameStorage.finish(playerResults);
 
             // Пытаемся сделать ставку после завершения
             await expect(
@@ -159,7 +159,7 @@ describe("DelegatecallGame", function () {
             expect(isPaid[2]).to.be.true;
 
             // Обновляем статус
-            await gameStorage.updateBettingStatus(await gameLogic.getAddress());
+            await gameStorage.updateBettingStatus();
 
             // Проверяем, что игра не отменена
             const [, , , , , results] = await gameStorage.getAllPlayers();
@@ -186,7 +186,7 @@ describe("DelegatecallGame", function () {
             });
 
             // Завершаем игру
-            await gameStorage.updateBettingStatus(await gameLogic.getAddress());
+            await gameStorage.updateBettingStatus();
             const playerResults = [
                 { wallet: player1.address, percent: 20 },
                 { wallet: player2.address, percent: 30 },
@@ -197,7 +197,7 @@ describe("DelegatecallGame", function () {
             const initialBalance2 = await ethers.provider.getBalance(player2.address);
             const initialBalance3 = await ethers.provider.getBalance(player3.address);
 
-            await gameStorage.finish(playerResults, await gameLogic.getAddress());
+            await gameStorage.finish(playerResults);
 
             const finalBalance1 = await ethers.provider.getBalance(player1.address);
             const finalBalance2 = await ethers.provider.getBalance(player2.address);
@@ -232,7 +232,7 @@ describe("DelegatecallGame", function () {
             });
 
             await expect(
-                gameStorage.updateBettingStatus(await gameLogic.getAddress())
+                gameStorage.updateBettingStatus()
             ).to.emit(gameStorage, "BettingFinished");
 
             // Проверяем событие GameFinalized
@@ -243,67 +243,58 @@ describe("DelegatecallGame", function () {
             ];
 
             await expect(
-                gameStorage.finish(playerResults, await gameLogic.getAddress())
+                gameStorage.finish(playerResults)
             ).to.emit(gameStorage, "GameFinalized");
         });
     });
 
     describe("Delegatecall", function () {
         it("Should fail if logic contract is invalid", async function () {
-            // Делаем ставки
-            await player1.sendTransaction({
-                to: await gameStorage.getAddress(),
-                value: ethers.parseEther("1.0")
-            });
-            await player2.sendTransaction({
-                to: await gameStorage.getAddress(),
-                value: ethers.parseEther("2.0")
-            });
-            await player3.sendTransaction({
-                to: await gameStorage.getAddress(),
-                value: ethers.parseEther("3.0")
-            });
-
-            // Пытаемся использовать неверный адрес
-            await expect(
-                gameStorage.updateBettingStatus(ethers.ZeroAddress)
-            ).to.be.revertedWith("Invalid logic contract address");
-
-            // Пытаемся завершить игру с неверным адресом
-            const playerResults = [
-                { wallet: player1.address, percent: 20 },
-                { wallet: player2.address, percent: 30 },
-                { wallet: player3.address, percent: 50 }
+            // Создаем новый storage с неверным адресом логики
+            const GameStorage = await ethers.getContractFactory("DelegateCallGameStorage");
+            const playerList = [
+                {
+                    name: "Player 1",
+                    wallet: player1.address,
+                    bet: ethers.parseEther("1.0"),
+                    isPaid: false,
+                    isPaidOut: false,
+                    result: 0n
+                }
             ];
+            const invalidStorage = await GameStorage.deploy(playerList, ethers.ZeroAddress);
 
+            // Пытаемся использовать storage с неверным адресом
             await expect(
-                gameStorage.finish(playerResults, ethers.ZeroAddress)
+                invalidStorage.updateBettingStatus()
             ).to.be.revertedWith("Invalid logic contract address");
         });
 
         it("Should handle delegatecall errors gracefully", async function () {
-            // Создаем контракт без нужных функций
-            const BadContract = await ethers.getContractFactory("DelegateCallGameStorage");
-            const badContract = await BadContract.deploy([]);
+            // Создаем контракт с неверным адресом логики
+            const GameStorage = await ethers.getContractFactory("DelegateCallGameStorage");
+            const playerList = [
+                {
+                    name: "Player 1",
+                    wallet: player1.address,
+                    bet: ethers.parseEther("1.0"),
+                    isPaid: false,
+                    isPaidOut: false,
+                    result: 0n
+                }
+            ];
+            const badContract = await GameStorage.deploy(playerList, ethers.ZeroAddress);
 
-            // Делаем ставки
+            // Делаем ставку
             await player1.sendTransaction({
-                to: await gameStorage.getAddress(),
+                to: await badContract.getAddress(),
                 value: ethers.parseEther("1.0")
             });
-            await player2.sendTransaction({
-                to: await gameStorage.getAddress(),
-                value: ethers.parseEther("2.0")
-            });
-            await player3.sendTransaction({
-                to: await gameStorage.getAddress(),
-                value: ethers.parseEther("3.0")
-            });
 
-            // Пытаемся использовать контракт без нужных функций
+            // Пытаемся использовать контракт с неверным адресом логики
             await expect(
-                gameStorage.updateBettingStatus(await badContract.getAddress())
-            ).to.be.revertedWith("Delegatecall failed");
+                badContract.updateBettingStatus()
+            ).to.be.revertedWith("Invalid logic contract address");
         });
     });
 });

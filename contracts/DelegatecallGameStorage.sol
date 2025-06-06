@@ -4,16 +4,16 @@ pragma solidity >=0.8.2 <0.9.0;
 import "./DelegatecallGameStorageBase.sol";
 
 contract DelegateCallGameStorage is DelegatecallGameStorageBase {
-    constructor(Player[] memory _playerList) {
-        _init(_playerList);
+    constructor(Player[] memory _playerList, address logicAddr) {
+        _init(_playerList, logicAddr);
     }
 
-    function updateBettingStatus(address logicAddr) public {
-        _updateBettingStatus(logicAddr);
+    function updateBettingStatus() public {
+        _updateBettingStatus();
     }
 
-    function finish(PlayerResult[] memory _playerResultList, address logicAddr) public payable {
-        _finish(_playerResultList, logicAddr);
+    function finish(PlayerResult[] memory _playerResultList) public payable {
+        _finish(_playerResultList);
     }
 
     receive() external payable {
