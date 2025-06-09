@@ -297,4 +297,10 @@ describe("DelegatecallGame", function () {
             ).to.be.revertedWith("Invalid logic contract address");
         });
     });
+
+    describe("Game Data", function () {
+        it("Should fail, variable values do not match those specified.", async function () {
+
+        });
+    });
 });

@@ -34,4 +34,17 @@ contract DelegateCallGameStorage is DelegatecallGameStorageBase {
     ) {
         return _getAllPlayers();
     }
+
+    function getGameData() public view returns (
+        uint256 bettingMaxTime,
+        uint256 gameMaxTime,
+        uint256 createdAt,
+        uint256 startedAt,
+        uint256 finishedAt,
+        bool isBettingComplete,
+        bool isGameAborted,
+        bool isGameFinished
+    ) {
+        return _getGameData();
+    }
 }

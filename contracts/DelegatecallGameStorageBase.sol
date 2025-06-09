@@ -120,7 +120,7 @@ contract DelegatecallGameStorageBase {
         }
     }
 
-    function _updateBettingStatus() internal 
+    function _updateBettingStatus() internal
         validLogicAddress
         gameNotFinished
         gameNotAborted
@@ -143,7 +143,7 @@ contract DelegatecallGameStorageBase {
         }
     }
 
-    function _finish(PlayerResult[] memory _playerResultList) internal 
+    function _finish(PlayerResult[] memory _playerResultList) internal
         validLogicAddress
         onlyOwner
         gameNotFinished
@@ -190,7 +190,7 @@ contract DelegatecallGameStorageBase {
         emit GameFinalized(block.timestamp);
     }
 
-    function _receive() internal 
+    function _receive() internal
         gameNotFinished
         bettingNotCompleted
         bettingTimeNotFinished
@@ -237,4 +237,26 @@ contract DelegatecallGameStorageBase {
         }
         return (names, wallets, bets, isPaid, isPaidOut, results);
     }
-} 
+
+    function _getGameData() internal view returns (
+        uint256 bettingMaxTime,
+        uint256 gameMaxTime,
+        uint256 createdAt,
+        uint256 startedAt,
+        uint256 finishedAt,
+        bool isBettingComplete,
+        bool isGameAborted,
+        bool isGameFinished
+    ) {
+        return (
+            bettingMaxTime,
+            gameMaxTime,
+            createdAt,
+            startedAt,
+            finishedAt,
+            isBettingComplete,
+            isGameAborted,
+            isGameFinished
+        );
+    }
+}
