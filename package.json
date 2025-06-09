@@ -3,7 +3,11 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "hardhat test"
+    "test": "hardhat test",
+    "test:game": "hardhat test test/DelegatecallGame.test.ts",
+    "test:game:watch": "nodemon --watch contracts/ --watch test/DelegatecallGame.test.ts --exec 'npx hardhat test test/DelegatecallGame.test.ts'",
+    "test:gameLogic": "hardhat test test/gameLogic.ts",
+    "test:gameLogic:watch": "nodemon --watch test/gameLogic.ts --exec 'npx hardhat test test/gameLogic.ts'"
   },
   "keywords": [],
   "author": "",
@@ -12,6 +16,7 @@
   "devDependencies": {
     "@nomicfoundation/hardhat-network-helpers": "^1.0.12",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "hardhat": "^2.24.1"
+    "hardhat": "^2.24.1",
+    "nodemon": "^3.1.10"
   }
 }

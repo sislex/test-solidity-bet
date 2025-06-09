@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity >=0.8.2 <0.9.0;
 
-import "./DelegatecallGameStorageBase.sol";
+import "./GameBase.sol";
 
-contract DelegateCallGameStorage is DelegatecallGameStorageBase {
+contract DelegateCallGameStorage is GameBase {
     constructor(Player[] memory _playerList, address logicAddr) {
         _init(_playerList, logicAddr);
+    }
+
+    receive() external payable {
+        _receive();
     }
 
     function updateBettingStatus() public {
@@ -16,9 +20,7 @@ contract DelegateCallGameStorage is DelegatecallGameStorageBase {
         _finish(_playerResultList);
     }
 
-    receive() external payable {
-        _receive();
-    }
+
 
     function getPlayer(uint256 index) public view returns (Player memory) {
         return _getPlayer(index);

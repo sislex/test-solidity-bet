@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0
+
+import "hardhat/console.sol";
+
+
+
 pragma solidity >=0.8.2 <0.9.0;
 
-contract DelegatecallGameStorageBase {
+contract GameBase {
     struct Player {
         string name;
         address wallet;
@@ -118,6 +123,8 @@ contract DelegatecallGameStorageBase {
             playerMap[_playerList[i].wallet] = i;
             playerExists[_playerList[i].wallet] = true;
         }
+
+        console.log("Value:", "Initialized");
     }
 
     function _updateBettingStatus() internal
@@ -125,22 +132,21 @@ contract DelegatecallGameStorageBase {
         gameNotFinished
         gameNotAborted
     {
-        bool[] memory paidFlags = new bool[](playerList.length);
+        bool  isAllPaid  = true;
+
         for (uint256 i = 0; i < playerList.length; i++) {
-            paidFlags[i] = playerList[i].isPaid;
+            if (!playerList[i].isPaid) {
+                isAllPaid = false;
+                break;
+            }
         }
 
-        (bool success, bytes memory result) = logicAddr.delegatecall(
-            abi.encodeWithSignature("checkBettingComplete(bool[])", paidFlags)
-        );
-        require(success, "Delegatecall failed");
-
-        bool allPaid = abi.decode(result, (bool));
-        if (allPaid && !isBettingComplete) {
+        if (isAllPaid && !isBettingComplete) {
             isBettingComplete = true;
-            startedAt = block.timestamp;
+            startedAt = block.timestamp; // Todo: change to when the game actually starts
             emit BettingFinished();
         }
+        console.log(startedAt);
     }
 
     function _finish(PlayerResult[] memory _playerResultList) internal
@@ -203,6 +209,9 @@ contract DelegatecallGameStorageBase {
         require(msg.value == player.bet, "Incorrect bet amount");
 
         player.isPaid = true;
+
+//        _updateBettingStatus();
+
         emit LogBet(msg.sender, player.name, player.bet);
     }
 
@@ -239,14 +248,14 @@ contract DelegatecallGameStorageBase {
     }
 
     function _getGameData() internal view returns (
-        uint256 bettingMaxTime,
-        uint256 gameMaxTime,
-        uint256 createdAt,
-        uint256 startedAt,
-        uint256 finishedAt,
-        bool isBettingComplete,
-        bool isGameAborted,
-        bool isGameFinished
+        uint256,
+        uint256,
+        uint256,
+        uint256,
+        uint256,
+        bool,
+        bool,
+        bool
     ) {
         return (
             bettingMaxTime,

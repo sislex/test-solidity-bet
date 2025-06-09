@@ -1,9 +1,9 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { DelegateCallGameStorage, DelegateCallGameLogic } from "../typechain-types";
+import { DelegateCallGameStorage, GameLogic } from "../typechain-types";
 
 describe("Multiple DelegateCallGameStorage connections", function () {
-    let gameLogic: DelegateCallGameLogic;
+    let gameLogic: GameLogic;
     let gameStorage1: DelegateCallGameStorage;
     let gameStorage2: DelegateCallGameStorage;
     let owner: any;
@@ -16,12 +16,12 @@ describe("Multiple DelegateCallGameStorage connections", function () {
         [owner, player1, player2, player3, player4] = await ethers.getSigners();
 
         // Деплоим один контракт логики
-        const GameLogic = await ethers.getContractFactory("DelegateCallGameLogic");
+        const GameLogic = await ethers.getContractFactory("GameLogic");
         gameLogic = await GameLogic.deploy();
 
         // Деплоим два storage-контракта с разными игроками
         const GameStorage = await ethers.getContractFactory("DelegateCallGameStorage");
-        
+
         // Первый storage с игроками 1 и 2
         const playerList1 = [
             {
@@ -112,4 +112,4 @@ describe("Multiple DelegateCallGameStorage connections", function () {
         expect(results2[0]).to.equal(ethers.parseEther("2.1")); // 30% от 7 ETH
         expect(results2[1]).to.equal(ethers.parseEther("4.9")); // 70% от 7 ETH
     });
-}); 
+});
