@@ -210,7 +210,7 @@ contract GameBase {
 
         player.isPaid = true;
 
-//        _updateBettingStatus();
+        _updateBettingStatus();
 
         emit LogBet(msg.sender, player.name, player.bet);
     }

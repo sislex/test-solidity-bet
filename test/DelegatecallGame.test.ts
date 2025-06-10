@@ -184,30 +184,31 @@ describe("DelegatecallGame", function () {
 
     describe("Events", function () {
         it("Should emit correct events during betting", async function () {
-            // Проверяем событие LogBet
             await expect(
-                player1.sendTransaction({
-                    to: await gameStorage.getAddress(),
-                    value: ethers.parseEther("1.0")
-                })
+              player1.sendTransaction({
+                  to: await gameStorage.getAddress(),
+                  value: ethers.parseEther("1.0")
+              })
             ).to.emit(gameStorage, "LogBet")
-                .withArgs(player1.address, "Player 1", ethers.parseEther("1.0"));
-
-            // Проверяем событие BettingFinished
-            await player2.sendTransaction({
-                to: await gameStorage.getAddress(),
-                value: ethers.parseEther("2.0")
-            });
-            await player3.sendTransaction({
-                to: await gameStorage.getAddress(),
-                value: ethers.parseEther("3.0")
-            });
+              .withArgs(player1.address, "Player 1", ethers.parseEther("1.0"));
 
             await expect(
-                gameStorage.updateBettingStatus()
-            ).to.emit(gameStorage, "BettingFinished");
+              player2.sendTransaction({
+                  to: await gameStorage.getAddress(),
+                  value: ethers.parseEther("2.0")
+              })
+            ).to.emit(gameStorage, "LogBet")
+              .withArgs(player2.address, "Player 2", ethers.parseEther("2.0"));
 
-            // Проверяем событие GameFinalized
+            await expect(
+              player3.sendTransaction({
+                  to: await gameStorage.getAddress(),
+                  value: ethers.parseEther("3.0")
+              })
+            ).to.emit(gameStorage, "LogBet")
+              .withArgs(player3.address, "Player 3", ethers.parseEther("3.0"))
+              .to.emit(gameStorage, "BettingFinished");
+
             const playerResults = [
                 { wallet: player1.address, percent: 20 },
                 { wallet: player2.address, percent: 30 },
@@ -215,7 +216,7 @@ describe("DelegatecallGame", function () {
             ];
 
             await expect(
-                gameStorage.finish(playerResults)
+              gameStorage.finish(playerResults)
             ).to.emit(gameStorage, "GameFinalized");
         });
     });
