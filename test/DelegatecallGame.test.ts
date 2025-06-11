@@ -125,6 +125,40 @@ describe("DelegatecallGame", function () {
         });
     });
 
+    describe("Game Abort", function () {
+        it("Should allow owner to abort game and refund players", async function () {
+            await player1.sendTransaction({
+                to: await gameStorage.getAddress(),
+                value: ethers.parseEther("1.0")
+            });
+            await player2.sendTransaction({
+                to: await gameStorage.getAddress(),
+                value: ethers.parseEther("2.0")
+            });
+
+            const initialBalance1 = await ethers.provider.getBalance(player1.address);
+            const initialBalance2 = await ethers.provider.getBalance(player2.address);
+            const initialOwnerBalance = await ethers.provider.getBalance(owner.address);
+
+            const tx = await gameStorage.abortGame();
+            const receipt = await tx.wait();
+            const gasUsed = receipt.gasUsed * receipt.gasPrice;
+
+            const finalBalance1 = await ethers.provider.getBalance(player1.address);
+            const finalBalance2 = await ethers.provider.getBalance(player2.address);
+            const finalOwnerBalance = await ethers.provider.getBalance(owner.address);
+
+            expect(finalBalance1 - initialBalance1).to.equal(ethers.parseEther("1.0"));
+            expect(finalBalance2 - initialBalance2).to.equal(ethers.parseEther("2.0"));
+            expect(finalOwnerBalance + gasUsed - initialOwnerBalance).to.equal(0);
+
+            const [, , , , , , isGameAborted] = await gameStorage.getGameData();
+            expect(isGameAborted).to.be.true;
+
+            expect(await gameStorage.getContractBalance()).to.equal(0);
+        });
+    });
+
     describe("Events", function () {
         it("Should emit correct events during betting", async function () {
             await expect(

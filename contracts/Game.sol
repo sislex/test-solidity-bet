@@ -57,4 +57,8 @@ contract DelegateCallGameStorage is GameBase {
     function withdrawRemainingBalance() public {
         _withdrawRemainingBalance();
     }
+
+    function abortGame() public {
+        _abortGame();
+    }
 }
