@@ -83,10 +83,8 @@ describe("DelegatecallGame", function () {
 
     describe("Contract Balance", function () {
         it("Should return correct contract balance", async function () {
-            // Проверяем начальный баланс
             expect(await gameStorage.getContractBalance()).to.equal(0);
 
-            // Делаем ставки
             await player1.sendTransaction({
                 to: await gameStorage.getAddress(),
                 value: ethers.parseEther("1.0")
@@ -100,8 +98,30 @@ describe("DelegatecallGame", function () {
                 value: ethers.parseEther("3.0")
             });
 
-            // Проверяем баланс после ставок
             expect(await gameStorage.getContractBalance()).to.equal(ethers.parseEther("6.0"));
+        });
+
+        it("Should allow owner to withdraw remaining balance", async function () {
+            await player1.sendTransaction({
+                to: await gameStorage.getAddress(),
+                value: ethers.parseEther("1.0")
+            });
+            await player2.sendTransaction({
+                to: await gameStorage.getAddress(),
+                value: ethers.parseEther("2.0")
+            });
+
+            const initialOwnerBalance = await ethers.provider.getBalance(owner.address);
+            
+            const tx = await gameStorage.withdrawRemainingBalance();
+            const receipt = await tx.wait();
+            
+            const gasUsed = receipt.gasUsed * receipt.gasPrice;
+            
+            expect(await gameStorage.getContractBalance()).to.equal(0);
+            
+            const finalOwnerBalance = await ethers.provider.getBalance(owner.address);
+            expect(finalOwnerBalance + gasUsed - initialOwnerBalance).to.equal(ethers.parseEther("3.0"));
         });
     });
 

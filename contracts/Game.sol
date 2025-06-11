@@ -53,4 +53,8 @@ contract DelegateCallGameStorage is GameBase {
     function getContractBalance() public view returns (uint256) {
         return _getContractBalance();
     }
+
+    function withdrawRemainingBalance() public {
+        _withdrawRemainingBalance();
+    }
 }

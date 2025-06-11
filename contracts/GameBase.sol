@@ -275,4 +275,16 @@ contract GameBase {
     function _getContractBalance() internal view returns (uint256) {
         return address(this).balance;
     }
+
+    function _withdrawRemainingBalance() internal
+        onlyOwner
+        gameNotFinished
+        gameNotAborted
+    {
+        uint256 balance = address(this).balance;
+        require(balance > 0, "No balance to withdraw");
+        
+        (bool success, ) = payable(owner).call{value: balance}("");
+        require(success, "Transfer failed");
+    }
 }
