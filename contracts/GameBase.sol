@@ -2,8 +2,6 @@
 
 import "hardhat/console.sol";
 
-
-
 pragma solidity >=0.8.2 <0.9.0;
 
 contract GameBase {
@@ -22,8 +20,8 @@ contract GameBase {
     }
 
     address internal owner;
-    uint256 internal bettingMaxTime = 5 minutes;
-    uint256 internal gameMaxTime = 30 minutes;
+    uint256 internal bettingMaxTime;
+    uint256 internal gameMaxTime;
 
     uint256 internal createdAt;
     uint256 internal startedAt;
@@ -103,10 +101,17 @@ contract GameBase {
         _;
     }
 
-    function _init(Player[] memory _playerList, address _logicAddr) internal {
+    function _init(
+        Player[] memory _playerList,
+        address _logicAddr,
+        uint256 _bettingMaxTime,
+        uint256 _gameMaxTime
+    ) internal {
         owner = msg.sender;
         createdAt = block.timestamp;
         logicAddr = _logicAddr;
+        bettingMaxTime = _bettingMaxTime;
+        gameMaxTime = _gameMaxTime;
 
         for (uint256 i = 0; i < _playerList.length; ++i) {
             require(!playerExists[_playerList[i].wallet], "Player already exists");
@@ -123,8 +128,6 @@ contract GameBase {
             playerMap[_playerList[i].wallet] = i;
             playerExists[_playerList[i].wallet] = true;
         }
-
-        console.log("Value:", "Initialized");
     }
 
     function _updateBettingStatus() internal
@@ -146,7 +149,6 @@ contract GameBase {
             startedAt = block.timestamp; // Todo: change to when the game actually starts
             emit BettingFinished();
         }
-        console.log(startedAt);
     }
 
     function _finish(PlayerResult[] memory _playerResultList) internal
@@ -155,6 +157,7 @@ contract GameBase {
         gameNotFinished
         bettingCompleted
         gameNotAborted
+        gameTimeNotExceeded
     {
         uint256 balance = address(this).balance;
 
@@ -267,5 +270,9 @@ contract GameBase {
             isGameAborted,
             isGameFinished
         );
+    }
+
+    function _getContractBalance() internal view returns (uint256) {
+        return address(this).balance;
     }
 }

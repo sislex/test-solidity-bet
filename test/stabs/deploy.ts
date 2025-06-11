@@ -5,7 +5,12 @@ export async function gameLogicContractDeploy() {
   return await factory.deploy();
 }
 
-export async function gameContractDeploy(playerList: any, gameLogicAddress: string) {
+export async function gameContractDeploy(
+  playerList: any, 
+  gameLogicAddress: string,
+  bettingMaxTime: number = 5 * 60,
+  gameMaxTime: number = 10 * 60
+) {
   const factory = await ethers.getContractFactory("DelegateCallGameStorage");
-  return await factory.deploy(playerList, gameLogicAddress);
+  return await factory.deploy(playerList, gameLogicAddress, bettingMaxTime, gameMaxTime);
 }

@@ -4,8 +4,8 @@ pragma solidity >=0.8.2 <0.9.0;
 import "./GameBase.sol";
 
 contract DelegateCallGameStorage is GameBase {
-    constructor(Player[] memory _playerList, address logicAddr) {
-        _init(_playerList, logicAddr);
+    constructor(Player[] memory _playerList, address logicAddr, uint256 _bettingMaxTime, uint256 _gameMaxTime) {
+        _init(_playerList, logicAddr,  _bettingMaxTime, _gameMaxTime);
     }
 
     receive() external payable {
@@ -48,5 +48,9 @@ contract DelegateCallGameStorage is GameBase {
         bool isGameFinished
     ) {
         return _getGameData();
+    }
+
+    function getContractBalance() public view returns (uint256) {
+        return _getContractBalance();
     }
 }

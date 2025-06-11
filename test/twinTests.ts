@@ -11,6 +11,8 @@ describe("Multiple DelegateCallGameStorage connections", function () {
     let player2: any;
     let player3: any;
     let player4: any;
+    const BETTING_MAX_TIME = 5 * 60; // 5 минут
+    const GAME_MAX_TIME = 10 * 60;   // 10 минут
 
     beforeEach(async function () {
         [owner, player1, player2, player3, player4] = await ethers.getSigners();
@@ -41,7 +43,12 @@ describe("Multiple DelegateCallGameStorage connections", function () {
                 result: 0n
             }
         ];
-        gameStorage1 = await GameStorage.deploy(playerList1, await gameLogic.getAddress());
+        gameStorage1 = await GameStorage.deploy(
+            playerList1, 
+            await gameLogic.getAddress(),
+            BETTING_MAX_TIME,
+            GAME_MAX_TIME
+        );
 
         // Второй storage с игроками 3 и 4
         const playerList2 = [
@@ -62,7 +69,12 @@ describe("Multiple DelegateCallGameStorage connections", function () {
                 result: 0n
             }
         ];
-        gameStorage2 = await GameStorage.deploy(playerList2, await gameLogic.getAddress());
+        gameStorage2 = await GameStorage.deploy(
+            playerList2, 
+            await gameLogic.getAddress(),
+            BETTING_MAX_TIME,
+            GAME_MAX_TIME
+        );
     });
 
     it("Should not mix data between storage contracts", async function () {
