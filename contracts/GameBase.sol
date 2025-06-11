@@ -107,6 +107,11 @@ contract GameBase {
         uint256 _bettingMaxTime,
         uint256 _gameMaxTime
     ) internal {
+        require(_playerList.length > 0, "Player list cannot be empty");
+        require(_logicAddr != address(0), "Invalid logic contract address");
+        require(_bettingMaxTime > 0, "Betting time must be greater than 0");
+        require(_gameMaxTime > 0, "Game time must be greater than 0");
+
         owner = msg.sender;
         createdAt = block.timestamp;
         logicAddr = _logicAddr;
