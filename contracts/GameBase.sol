@@ -295,7 +295,6 @@ contract GameBase {
     {
         isGameAborted = true;
         
-        // Возвращаем ставки всем игрокам
         for (uint256 i = 0; i < playerList.length; i++) {
             if (playerList[i].isPaid && !playerList[i].isPaidOut) {
                 (bool success, ) = payable(playerList[i].wallet).call{value: playerList[i].bet}("");
@@ -304,7 +303,6 @@ contract GameBase {
             }
         }
         
-        // Если остались средства, отправляем их владельцу
         if (address(this).balance > 0) {
             (bool success, ) = payable(owner).call{value: address(this).balance}("");
             require(success, "Owner refund failed");
