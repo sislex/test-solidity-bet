@@ -1,5 +1,5 @@
 import {ethers} from 'hardhat';
-import { BETTING_MAX_TIME, GAME_MAX_TIME } from "./playerList";
+import { BETTING_MAX_TIME, GAME_MAX_TIME } from "./stabs";
 
 export async function gameLogicContractDeploy() {
   const factory = await ethers.getContractFactory("GameLogic");
@@ -7,7 +7,7 @@ export async function gameLogicContractDeploy() {
 }
 
 export async function gameContractDeploy(
-  playerList: any, 
+  playerList: any,
   gameLogicAddress: string,
   bettingMaxTime = BETTING_MAX_TIME,
   gameMaxTime = GAME_MAX_TIME

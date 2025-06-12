@@ -8,7 +8,7 @@ import {
     GAME_MAX_TIME,
     GAME_MAX_TIME_IS_OVER,
     getPlayerList3Players
-} from './stabs/playerList';
+} from './stabs/stabs';
 
 describe("DelegatecallGame", function () {
     let gameStorage: DelegateCallGameStorage;

@@ -23,6 +23,5 @@ describe("GameLogic", function () {
             expect(payouts[0]).to.equal(ethers.parseEther("0.6"));
             expect(payouts[1]).to.equal(ethers.parseEther("0.4"));
         });
-
     });
 });

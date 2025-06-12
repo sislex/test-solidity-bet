@@ -4,8 +4,8 @@
   "main": "index.js",
   "scripts": {
     "test": "hardhat test",
-    "test:game": "hardhat test test/DelegatecallGame.test.ts",
-    "test:game:watch": "nodemon --watch contracts/ --watch test/DelegatecallGame.test.ts --exec 'npx hardhat test test/DelegatecallGame.test.ts'",
+    "test:game": "hardhat test test/game.test.ts",
+    "test:game:watch": "nodemon --watch contracts/ --watch test/game.test.ts --exec 'npx hardhat test test/game.test.ts'",
     "test:gameLogic": "hardhat test test/gameLogic.ts",
     "test:gameLogic:watch": "nodemon --watch test/gameLogic.ts --exec 'npx hardhat test test/gameLogic.ts'"
   },
