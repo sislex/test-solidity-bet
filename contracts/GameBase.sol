@@ -136,33 +136,34 @@ contract GameBase {
     }
 
     function _updateBettingStatus() internal
-        validLogicAddress
-        gameNotFinished
-        gameNotAborted
+    validLogicAddress
+    gameNotFinished
+    gameNotAborted
     {
         bool  isAllPaid  = true;
-
-        for (uint256 i = 0; i < playerList.length; i++) {
-            if (!playerList[i].isPaid) {
-                isAllPaid = false;
-                break;
+        if (!isBettingComplete) {
+            for (uint256 i = 0; i < playerList.length; i++) {
+                if (!playerList[i].isPaid) {
+                    isAllPaid = false;
+                    break;
+                }
             }
-        }
 
-        if (isAllPaid && !isBettingComplete) {
-            isBettingComplete = true;
-            startedAt = block.timestamp; // Todo: change to when the game actually starts
-            emit BettingFinished();
+            if(isAllPaid) {
+                isBettingComplete = true;
+                startedAt = block.timestamp; // Todo: change to when the game actually starts
+                emit BettingFinished();
+            }
         }
     }
 
     function _finish(PlayerResult[] memory _playerResultList) internal
-        validLogicAddress
-        onlyOwner
-        gameNotFinished
-        bettingCompleted
-        gameNotAborted
-        gameTimeNotExceeded
+    validLogicAddress
+    onlyOwner
+    gameNotFinished
+    bettingCompleted
+    gameNotAborted
+    gameTimeNotExceeded
     {
         uint256 balance = address(this).balance;
 
@@ -205,11 +206,11 @@ contract GameBase {
     }
 
     function _receive() internal
-        gameNotFinished
-        bettingNotCompleted
-        bettingTimeNotFinished
-        playerExist
-        gameNotAborted
+    gameNotFinished
+    bettingNotCompleted
+    bettingTimeNotFinished
+    playerExist
+    gameNotAborted
     {
         uint256 idx = playerMap[msg.sender];
         Player storage player = playerList[idx];
@@ -282,22 +283,23 @@ contract GameBase {
     }
 
     function _withdrawRemainingBalance() internal
-        onlyOwner
+    onlyOwner
     {
         uint256 balance = address(this).balance;
-        require(balance > 0, "No balance to withdraw");
-        
-        (bool success, ) = payable(owner).call{value: balance}("");
-        require(success, "Transfer failed");
+
+        if (balance > 0) {
+            (bool success, ) = payable(owner).call{value: balance}("");
+            require(success, "Transfer failed");
+        }
     }
 
     function _abortGame() internal
-        onlyOwner
-        gameNotFinished
-        gameNotAborted
+    onlyOwner
+    gameNotFinished
+    gameNotAborted
     {
         isGameAborted = true;
-        
+
         for (uint256 i = 0; i < playerList.length; i++) {
             if (playerList[i].isPaid && !playerList[i].isPaidOut) {
                 (bool success, ) = payable(playerList[i].wallet).call{value: playerList[i].bet}("");
@@ -305,10 +307,7 @@ contract GameBase {
                 playerList[i].isPaidOut = true;
             }
         }
-        
-        if (address(this).balance > 0) {
-            (bool success, ) = payable(owner).call{value: address(this).balance}("");
-            require(success, "Owner refund failed");
-        }
+
+        _withdrawRemainingBalance();
     }
 }

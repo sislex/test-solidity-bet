@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { DelegateCallGameStorage, GameLogic } from "../typechain-types";
 import {gameContractDeploy, gameLogicContractDeploy} from './stabs/deploy';
-import {getPlayerList3Players} from './stabs/playerList';
+import { BETTING_MAX_TIME, GAME_MAX_TIME, getPlayerList3Players } from "./stabs/playerList";
 
 describe("DelegatecallGame", function () {
     let gameStorage: DelegateCallGameStorage;
@@ -11,72 +11,73 @@ describe("DelegatecallGame", function () {
     let player1: any;
     let player2: any;
     let player3: any;
-    const BETTING_MAX_TIME = 5 * 60;
-    const GAME_MAX_TIME = 10 * 60;
 
     beforeEach(async function () {
         [owner, player1, player2, player3] = await ethers.getSigners();
         gameLogic = await gameLogicContractDeploy();
         gameStorage = await gameContractDeploy(
-            await getPlayerList3Players(),
-            await gameLogic.getAddress(),
-            BETTING_MAX_TIME,
-            GAME_MAX_TIME
+          await getPlayerList3Players(),
+          await gameLogic.getAddress(),
+          BETTING_MAX_TIME,
+          GAME_MAX_TIME
         );
     });
 
-    describe("Initialization", function () {
-        it("Should set the correct time limits", async function () {
+    describe("Check initialization data", function () {
+        it("Should be the correct time limits", async function () {
             const [bettingMaxTime, gameMaxTime] = await gameStorage.getGameData();
             expect(bettingMaxTime).to.equal(BETTING_MAX_TIME);
             expect(gameMaxTime).to.equal(GAME_MAX_TIME);
         });
+    });
+
+    describe("Check initialization data", function () {
 
         it("Should revert when initializing with empty player list", async function () {
             const emptyPlayerList: any[] = [];
-            
+
             await expect(
-                gameContractDeploy(
-                    emptyPlayerList,
-                    await gameLogic.getAddress(),
-                    BETTING_MAX_TIME,
-                    GAME_MAX_TIME
-                )
+              gameContractDeploy(
+                emptyPlayerList,
+                await gameLogic.getAddress(),
+                BETTING_MAX_TIME,
+                GAME_MAX_TIME
+              )
             ).to.be.revertedWith("Player list cannot be empty");
         });
 
         it("Should revert when initializing with zero logic address", async function () {
             const zeroAddress = "0x0000000000000000000000000000000000000000";
-            
+
             await expect(
-                gameContractDeploy(
-                    await getPlayerList3Players(),
-                    zeroAddress,
-                    BETTING_MAX_TIME,
-                    GAME_MAX_TIME
-                )
+              gameContractDeploy(
+                await getPlayerList3Players(),
+                zeroAddress,
+                BETTING_MAX_TIME,
+                GAME_MAX_TIME
+              )
             ).to.be.revertedWith("Invalid logic contract address");
         });
 
         it("Should revert when initializing with zero betting time", async function () {
             await expect(
-                gameContractDeploy(
-                    await getPlayerList3Players(),
-                    await gameLogic.getAddress(),
-                    0,
-                    GAME_MAX_TIME
-                )
+              gameContractDeploy(
+                await getPlayerList3Players(),
+                await gameLogic.getAddress(),
+                0,
+                GAME_MAX_TIME
+              )
             ).to.be.revertedWith("Betting time must be greater than 0");
         });
 
         it("Should revert when initializing with zero game time", async function () {
             await expect(
-                gameContractDeploy(
-                    await getPlayerList3Players(),
-                    await gameLogic.getAddress(),
-                    BETTING_MAX_TIME,
-                    0
-                )
+              gameContractDeploy(
+                await getPlayerList3Players(),
+                await gameLogic.getAddress(),
+                BETTING_MAX_TIME,
+                0
+              )
             ).to.be.revertedWith("Game time must be greater than 0");
         });
     });
@@ -211,7 +212,7 @@ describe("DelegatecallGame", function () {
                 await gameStorage.finish(playerResults);
 
                 await expect(
-                    gameStorage.updateBettingStatus()
+                  gameStorage.updateBettingStatus()
                 ).to.be.revertedWith("Game is already finished");
             });
 
@@ -233,7 +234,7 @@ describe("DelegatecallGame", function () {
                 await gameStorage.abortGame();
 
                 await expect(
-                    gameStorage.updateBettingStatus()
+                  gameStorage.updateBettingStatus()
                 ).to.be.revertedWith("Game is aborted");
             });
         });
@@ -244,10 +245,10 @@ describe("DelegatecallGame", function () {
             await ethers.provider.send("evm_mine");
 
             await expect(
-                player1.sendTransaction({
-                    to: await gameStorage.getAddress(),
-                    value: ethers.parseEther("1.0")
-                })
+              player1.sendTransaction({
+                  to: await gameStorage.getAddress(),
+                  value: ethers.parseEther("1.0")
+              })
             ).to.be.revertedWith("Betting time is over");
         });
 
@@ -277,7 +278,7 @@ describe("DelegatecallGame", function () {
             ];
 
             await expect(
-                gameStorage.finish(playerResults)
+              gameStorage.finish(playerResults)
             ).to.be.revertedWith("Game time exceeded");
         });
     });
@@ -313,18 +314,18 @@ describe("DelegatecallGame", function () {
             });
 
             const initialOwnerBalance = await ethers.provider.getBalance(owner.address);
-            
+
             const tx = await gameStorage.withdrawRemainingBalance();
             const receipt = await tx.wait();
-            
+
             if (!receipt) {
                 throw new Error("Transaction receipt is null");
             }
-            
+
             const gasUsed = receipt.gasUsed * receipt.gasPrice;
-            
+
             expect(await gameStorage.getContractBalance()).to.equal(0);
-            
+
             const finalOwnerBalance = await ethers.provider.getBalance(owner.address);
             expect(finalOwnerBalance + gasUsed - initialOwnerBalance).to.equal(ethers.parseEther("3.0"));
         });
@@ -336,60 +337,8 @@ describe("DelegatecallGame", function () {
             });
 
             await expect(
-                gameStorage.connect(player1).withdrawRemainingBalance()
+              gameStorage.connect(player1).withdrawRemainingBalance()
             ).to.be.revertedWith("Only the owner can call this function");
-        });
-
-        it("Should revert when trying to withdraw after game is finished", async function () {
-            await player1.sendTransaction({
-                to: await gameStorage.getAddress(),
-                value: ethers.parseEther("1.0")
-            });
-            await player2.sendTransaction({
-                to: await gameStorage.getAddress(),
-                value: ethers.parseEther("2.0")
-            });
-            await player3.sendTransaction({
-                to: await gameStorage.getAddress(),
-                value: ethers.parseEther("3.0")
-            });
-
-            await gameStorage.updateBettingStatus();
-
-            const playerResults = [
-                { wallet: player1.address, percent: 20 },
-                { wallet: player2.address, percent: 30 },
-                { wallet: player3.address, percent: 50 }
-            ];
-
-            await gameStorage.finish(playerResults);
-
-            await expect(
-                gameStorage.withdrawRemainingBalance()
-            ).to.be.revertedWith("No balance to withdraw");
-        });
-
-        it("Should revert when trying to withdraw after game is aborted", async function () {
-            await player1.sendTransaction({
-                to: await gameStorage.getAddress(),
-                value: ethers.parseEther("1.0")
-            });
-            await player2.sendTransaction({
-                to: await gameStorage.getAddress(),
-                value: ethers.parseEther("2.0")
-            });
-
-            await gameStorage.abortGame();
-
-            await expect(
-                gameStorage.withdrawRemainingBalance()
-            ).to.be.revertedWith("No balance to withdraw");
-        });
-
-        it("Should revert when trying to withdraw with zero balance", async function () {
-            await expect(
-                gameStorage.withdrawRemainingBalance()
-            ).to.be.revertedWith("No balance to withdraw");
         });
     });
 
@@ -410,11 +359,11 @@ describe("DelegatecallGame", function () {
 
             const tx = await gameStorage.abortGame();
             const receipt = await tx.wait();
-            
+
             if (!receipt) {
                 throw new Error("Transaction receipt is null");
             }
-            
+
             const gasUsed = receipt.gasUsed * receipt.gasPrice;
 
             const finalBalance1 = await ethers.provider.getBalance(player1.address);
@@ -438,7 +387,7 @@ describe("DelegatecallGame", function () {
             });
 
             await expect(
-                gameStorage.connect(player1).abortGame()
+              gameStorage.connect(player1).abortGame()
             ).to.be.revertedWith("Only the owner can call this function");
         });
 
@@ -467,7 +416,7 @@ describe("DelegatecallGame", function () {
             await gameStorage.finish(playerResults);
 
             await expect(
-                gameStorage.abortGame()
+              gameStorage.abortGame()
             ).to.be.revertedWith("Game is already finished");
         });
 
@@ -480,7 +429,7 @@ describe("DelegatecallGame", function () {
             await gameStorage.abortGame();
 
             await expect(
-                gameStorage.abortGame()
+              gameStorage.abortGame()
             ).to.be.revertedWith("Game is aborted");
         });
     });
@@ -538,7 +487,7 @@ describe("DelegatecallGame", function () {
             ];
 
             await expect(
-                gameStorage.finish(playerResults)
+              gameStorage.finish(playerResults)
             ).to.be.revertedWith("Betting not completed yet");
         });
 
@@ -568,7 +517,7 @@ describe("DelegatecallGame", function () {
             ];
 
             await expect(
-                gameStorage.finish(playerResults)
+              gameStorage.finish(playerResults)
             ).to.be.revertedWith("Game time exceeded");
         });
 
@@ -596,7 +545,7 @@ describe("DelegatecallGame", function () {
             ];
 
             await expect(
-                gameStorage.finish(playerResults)
+              gameStorage.finish(playerResults)
             ).to.be.revertedWith("Game is aborted");
         });
 
@@ -623,7 +572,7 @@ describe("DelegatecallGame", function () {
             ];
 
             await expect(
-                gameStorage.finish(playerResults)
+              gameStorage.finish(playerResults)
             ).to.be.revertedWith("Delegatecall failed");
         });
 
@@ -650,7 +599,7 @@ describe("DelegatecallGame", function () {
             ];
 
             await expect(
-                gameStorage.finish(playerResults)
+              gameStorage.finish(playerResults)
             ).to.be.revertedWith("Delegatecall failed");
         });
 
@@ -677,7 +626,7 @@ describe("DelegatecallGame", function () {
             ];
 
             await expect(
-                gameStorage.connect(player1).finish(playerResults)
+              gameStorage.connect(player1).finish(playerResults)
             ).to.be.revertedWith("Only the owner can call this function");
         });
     });
@@ -688,10 +637,10 @@ describe("DelegatecallGame", function () {
             await ethers.provider.send("evm_mine");
 
             await expect(
-                player1.sendTransaction({
-                    to: await gameStorage.getAddress(),
-                    value: ethers.parseEther("1.0")
-                })
+              player1.sendTransaction({
+                  to: await gameStorage.getAddress(),
+                  value: ethers.parseEther("1.0")
+              })
             ).to.be.revertedWith("Betting time is over");
         });
 
@@ -720,10 +669,10 @@ describe("DelegatecallGame", function () {
             await gameStorage.finish(playerResults);
 
             await expect(
-                player1.sendTransaction({
-                    to: await gameStorage.getAddress(),
-                    value: ethers.parseEther("1.0")
-                })
+              player1.sendTransaction({
+                  to: await gameStorage.getAddress(),
+                  value: ethers.parseEther("1.0")
+              })
             ).to.be.revertedWith("Game is already finished");
         });
 
@@ -736,30 +685,30 @@ describe("DelegatecallGame", function () {
             await gameStorage.abortGame();
 
             await expect(
-                player2.sendTransaction({
-                    to: await gameStorage.getAddress(),
-                    value: ethers.parseEther("2.0")
-                })
+              player2.sendTransaction({
+                  to: await gameStorage.getAddress(),
+                  value: ethers.parseEther("2.0")
+              })
             ).to.be.revertedWith("Game is aborted");
         });
 
         it("Should revert when non-registered player tries to place bet", async function () {
             const [nonRegisteredPlayer] = await ethers.getSigners();
-            
+
             await expect(
-                nonRegisteredPlayer.sendTransaction({
-                    to: await gameStorage.getAddress(),
-                    value: ethers.parseEther("1.0")
-                })
+              nonRegisteredPlayer.sendTransaction({
+                  to: await gameStorage.getAddress(),
+                  value: ethers.parseEther("1.0")
+              })
             ).to.be.revertedWith("Player does not exist");
         });
 
         it("Should revert when trying to place bet with incorrect amount", async function () {
             await expect(
-                player1.sendTransaction({
-                    to: await gameStorage.getAddress(),
-                    value: ethers.parseEther("2.0") // Should be 1.0
-                })
+              player1.sendTransaction({
+                  to: await gameStorage.getAddress(),
+                  value: ethers.parseEther("2.0") // Should be 1.0
+              })
             ).to.be.revertedWith("Incorrect bet amount");
         });
 
@@ -770,10 +719,10 @@ describe("DelegatecallGame", function () {
             });
 
             await expect(
-                player1.sendTransaction({
-                    to: await gameStorage.getAddress(),
-                    value: ethers.parseEther("1.0")
-                })
+              player1.sendTransaction({
+                  to: await gameStorage.getAddress(),
+                  value: ethers.parseEther("1.0")
+              })
             ).to.be.revertedWith("Player has already paid");
         });
     });
