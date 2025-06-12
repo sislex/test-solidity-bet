@@ -2,7 +2,13 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { DelegateCallGameStorage, GameLogic } from "../typechain-types";
 import {gameContractDeploy, gameLogicContractDeploy} from './stabs/deploy';
-import { BETTING_MAX_TIME, GAME_MAX_TIME, getPlayerList3Players } from "./stabs/playerList";
+import {
+    BETTING_MAX_TIME,
+    BETTING_MAX_TIME_IS_OVER,
+    GAME_MAX_TIME,
+    GAME_MAX_TIME_IS_OVER,
+    getPlayerList3Players
+} from './stabs/playerList';
 
 describe("DelegatecallGame", function () {
     let gameStorage: DelegateCallGameStorage;
@@ -23,15 +29,19 @@ describe("DelegatecallGame", function () {
         );
     });
 
-    describe("Check initialization data", function () {
-        it("Should be the correct time limits", async function () {
-            const [bettingMaxTime, gameMaxTime] = await gameStorage.getGameData();
-            expect(bettingMaxTime).to.equal(BETTING_MAX_TIME);
-            expect(gameMaxTime).to.equal(GAME_MAX_TIME);
-        });
-    });
+    describe("Initialization", function () {
+        it("Should revert when initializing with zero logic address", async function () {
+            const zeroAddress = "0x0000000000000000000000000000000000000000";
 
-    describe("Check initialization data", function () {
+            await expect(
+              gameContractDeploy(
+                await getPlayerList3Players(),
+                zeroAddress,
+                BETTING_MAX_TIME,
+                GAME_MAX_TIME
+              )
+            ).to.be.revertedWith("Invalid logic contract address");
+        });
 
         it("Should revert when initializing with empty player list", async function () {
             const emptyPlayerList: any[] = [];
@@ -44,19 +54,6 @@ describe("DelegatecallGame", function () {
                 GAME_MAX_TIME
               )
             ).to.be.revertedWith("Player list cannot be empty");
-        });
-
-        it("Should revert when initializing with zero logic address", async function () {
-            const zeroAddress = "0x0000000000000000000000000000000000000000";
-
-            await expect(
-              gameContractDeploy(
-                await getPlayerList3Players(),
-                zeroAddress,
-                BETTING_MAX_TIME,
-                GAME_MAX_TIME
-              )
-            ).to.be.revertedWith("Invalid logic contract address");
         });
 
         it("Should revert when initializing with zero betting time", async function () {
@@ -82,15 +79,21 @@ describe("DelegatecallGame", function () {
         });
     });
 
-    describe("Time Restrictions", function () {
-        it("Should update betting status when all players have placed bets", async function () {
-            const [,,,startedAt,finishedAt,isBettingComplete,isGameAborted,isGameFinished] = await gameStorage.getGameData();
+    describe("Check initialization data", function () {
+        it("Should be correct data", async function () {
+            const [bettingMaxTime, gameMaxTime,, startedAt, finishedAt, isBettingComplete, isGameAborted, isGameFinished] = await gameStorage.getGameData();
+            expect(bettingMaxTime).to.equal(BETTING_MAX_TIME);
+            expect(gameMaxTime).to.equal(GAME_MAX_TIME);
             expect(isBettingComplete).to.be.false;
             expect(startedAt).to.equal(0);
             expect(finishedAt).to.equal(0);
             expect(isGameAborted).to.be.false;
             expect(isGameFinished).to.be.false;
+        });
+    });
 
+    describe("Time Restrictions", function () {
+        it("Should update betting status when all players have placed bets", async function () {
             await player1.sendTransaction({
                 to: await gameStorage.getAddress(),
                 value: ethers.parseEther("1.0")
@@ -103,8 +106,6 @@ describe("DelegatecallGame", function () {
                 to: await gameStorage.getAddress(),
                 value: ethers.parseEther("3.0")
             });
-
-            await gameStorage.updateBettingStatus();
 
             const [,,,newStartedAt,newFinishedAt,newIsBettingComplete,newIsGameAborted,newIsGameFinished] = await gameStorage.getGameData();
             expect(newIsBettingComplete).to.be.true;
@@ -128,9 +129,6 @@ describe("DelegatecallGame", function () {
                 to: await gameStorage.getAddress(),
                 value: ethers.parseEther("3.0")
             });
-
-            // Обновляем статус ставок
-            await gameStorage.updateBettingStatus();
 
             // Проверяем начальные балансы
             const initialBalance1 = await ethers.provider.getBalance(player1.address);
@@ -170,13 +168,10 @@ describe("DelegatecallGame", function () {
 
         describe("updateBettingStatus negative scenarios", function () {
             it("Should not update status when not all players have placed bets", async function () {
-
                 await player1.sendTransaction({
                     to: await gameStorage.getAddress(),
                     value: ethers.parseEther("1.0")
                 });
-
-                await gameStorage.updateBettingStatus();
 
                 const [,,,startedAt,finishedAt,isBettingComplete,isGameAborted,isGameFinished] = await gameStorage.getGameData();
                 expect(isBettingComplete).to.be.false;
@@ -185,63 +180,10 @@ describe("DelegatecallGame", function () {
                 expect(isGameAborted).to.be.false;
                 expect(isGameFinished).to.be.false;
             });
-
-            it("Should revert when trying to update status after game is finished", async function () {
-
-                await player1.sendTransaction({
-                    to: await gameStorage.getAddress(),
-                    value: ethers.parseEther("1.0")
-                });
-                await player2.sendTransaction({
-                    to: await gameStorage.getAddress(),
-                    value: ethers.parseEther("2.0")
-                });
-                await player3.sendTransaction({
-                    to: await gameStorage.getAddress(),
-                    value: ethers.parseEther("3.0")
-                });
-
-                await gameStorage.updateBettingStatus();
-
-                const playerResults = [
-                    { wallet: player1.address, percent: 20 },
-                    { wallet: player2.address, percent: 30 },
-                    { wallet: player3.address, percent: 50 }
-                ];
-
-                await gameStorage.finish(playerResults);
-
-                await expect(
-                  gameStorage.updateBettingStatus()
-                ).to.be.revertedWith("Game is already finished");
-            });
-
-            it("Should revert when trying to update status after game is aborted", async function () {
-
-                await player1.sendTransaction({
-                    to: await gameStorage.getAddress(),
-                    value: ethers.parseEther("1.0")
-                });
-                await player2.sendTransaction({
-                    to: await gameStorage.getAddress(),
-                    value: ethers.parseEther("2.0")
-                });
-                await player3.sendTransaction({
-                    to: await gameStorage.getAddress(),
-                    value: ethers.parseEther("3.0")
-                });
-
-                await gameStorage.abortGame();
-
-                await expect(
-                  gameStorage.updateBettingStatus()
-                ).to.be.revertedWith("Game is aborted");
-            });
         });
 
         it("Should not accept bets after betting time is over", async function () {
-
-            await ethers.provider.send("evm_increaseTime", [6 * 60]);
+            await ethers.provider.send("evm_increaseTime", [BETTING_MAX_TIME_IS_OVER]);
             await ethers.provider.send("evm_mine");
 
             await expect(
@@ -266,9 +208,7 @@ describe("DelegatecallGame", function () {
                 value: ethers.parseEther("3.0")
             });
 
-            await gameStorage.updateBettingStatus();
-
-            await ethers.provider.send("evm_increaseTime", [11 * 60]);
+            await ethers.provider.send("evm_increaseTime", [GAME_MAX_TIME_IS_OVER]);
             await ethers.provider.send("evm_mine");
 
             const playerResults = [
@@ -380,7 +320,7 @@ describe("DelegatecallGame", function () {
             expect(await gameStorage.getContractBalance()).to.equal(0);
         });
 
-        it("Should revert when non-owner tries to abort game", async function () {
+        it("Should not allow not owner to abort game", async function () {
             await player1.sendTransaction({
                 to: await gameStorage.getAddress(),
                 value: ethers.parseEther("1.0")
@@ -404,8 +344,6 @@ describe("DelegatecallGame", function () {
                 to: await gameStorage.getAddress(),
                 value: ethers.parseEther("3.0")
             });
-
-            await gameStorage.updateBettingStatus();
 
             const playerResults = [
                 { wallet: player1.address, percent: 20 },
@@ -473,7 +411,7 @@ describe("DelegatecallGame", function () {
         });
     });
 
-    describe("finish negative scenarios", function () {
+    describe("Finish negative scenarios", function () {
         it("Should revert when trying to finish game before all players have placed bets", async function () {
             await player1.sendTransaction({
                 to: await gameStorage.getAddress(),
@@ -505,9 +443,7 @@ describe("DelegatecallGame", function () {
                 value: ethers.parseEther("3.0")
             });
 
-            await gameStorage.updateBettingStatus();
-
-            await ethers.provider.send("evm_increaseTime", [11 * 60]);
+            await ethers.provider.send("evm_increaseTime", [GAME_MAX_TIME]);
             await ethers.provider.send("evm_mine");
 
             const playerResults = [
@@ -535,7 +471,6 @@ describe("DelegatecallGame", function () {
                 value: ethers.parseEther("3.0")
             });
 
-            await gameStorage.updateBettingStatus();
             await gameStorage.abortGame();
 
             const playerResults = [
@@ -549,7 +484,7 @@ describe("DelegatecallGame", function () {
             ).to.be.revertedWith("Game is aborted");
         });
 
-        it("Should revert when trying to finish game with incorrect percentages", async function () {
+        it("Should revert when trying to finish game with incorrect percentages", async function () { // need to rework. Amount of percent can be less than 100
             await player1.sendTransaction({
                 to: await gameStorage.getAddress(),
                 value: ethers.parseEther("1.0")
@@ -563,7 +498,6 @@ describe("DelegatecallGame", function () {
                 value: ethers.parseEther("3.0")
             });
 
-            await gameStorage.updateBettingStatus();
 
             const playerResults = [
                 { wallet: player1.address, percent: 20 },
@@ -590,8 +524,6 @@ describe("DelegatecallGame", function () {
                 value: ethers.parseEther("3.0")
             });
 
-            await gameStorage.updateBettingStatus();
-
             const playerResults = [
                 { wallet: player1.address, percent: 20 },
                 { wallet: player2.address, percent: 30 },
@@ -616,8 +548,6 @@ describe("DelegatecallGame", function () {
                 to: await gameStorage.getAddress(),
                 value: ethers.parseEther("3.0")
             });
-
-            await gameStorage.updateBettingStatus();
 
             const playerResults = [
                 { wallet: player1.address, percent: 20 },
@@ -657,8 +587,6 @@ describe("DelegatecallGame", function () {
                 to: await gameStorage.getAddress(),
                 value: ethers.parseEther("3.0")
             });
-
-            await gameStorage.updateBettingStatus();
 
             const playerResults = [
                 { wallet: player1.address, percent: 20 },

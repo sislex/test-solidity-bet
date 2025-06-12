@@ -12,10 +12,6 @@ contract DelegateCallGameStorage is GameBase {
         _receive();
     }
 
-    function updateBettingStatus() public {
-        _updateBettingStatus();
-    }
-
     function finish(PlayerResult[] memory _playerResultList) public payable {
         _finish(_playerResultList);
     }

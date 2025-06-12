@@ -137,8 +137,6 @@ contract GameBase {
 
     function _updateBettingStatus() internal
     validLogicAddress
-    gameNotFinished
-    gameNotAborted
     {
         bool  isAllPaid  = true;
         if (!isBettingComplete) {
@@ -207,10 +205,10 @@ contract GameBase {
 
     function _receive() internal
     gameNotFinished
+    gameNotAborted
     bettingNotCompleted
     bettingTimeNotFinished
     playerExist
-    gameNotAborted
     {
         uint256 idx = playerMap[msg.sender];
         Player storage player = playerList[idx];
