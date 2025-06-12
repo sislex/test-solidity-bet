@@ -20,8 +20,6 @@ contract DelegateCallGameStorage is GameBase {
         _finish(_playerResultList);
     }
 
-
-
     function getPlayer(uint256 index) public view returns (Player memory) {
         return _getPlayer(index);
     }

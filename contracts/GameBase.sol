@@ -283,8 +283,6 @@ contract GameBase {
 
     function _withdrawRemainingBalance() internal
         onlyOwner
-        gameNotFinished
-        gameNotAborted
     {
         uint256 balance = address(this).balance;
         require(balance > 0, "No balance to withdraw");

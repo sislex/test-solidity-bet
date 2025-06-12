@@ -366,7 +366,7 @@ describe("DelegatecallGame", function () {
 
             await expect(
                 gameStorage.withdrawRemainingBalance()
-            ).to.be.revertedWith("Game is already finished");
+            ).to.be.revertedWith("No balance to withdraw");
         });
 
         it("Should revert when trying to withdraw after game is aborted", async function () {
@@ -383,7 +383,7 @@ describe("DelegatecallGame", function () {
 
             await expect(
                 gameStorage.withdrawRemainingBalance()
-            ).to.be.revertedWith("Game is aborted");
+            ).to.be.revertedWith("No balance to withdraw");
         });
 
         it("Should revert when trying to withdraw with zero balance", async function () {
@@ -619,7 +619,7 @@ describe("DelegatecallGame", function () {
             const playerResults = [
                 { wallet: player1.address, percent: 20 },
                 { wallet: player2.address, percent: 30 },
-                { wallet: player3.address, percent: 40 } // Сумма 90% вместо 100%
+                { wallet: player3.address, percent: 40 } // Sum 90% instead of 100%
             ];
 
             await expect(
@@ -646,7 +646,7 @@ describe("DelegatecallGame", function () {
             const playerResults = [
                 { wallet: player1.address, percent: 20 },
                 { wallet: player2.address, percent: 30 },
-                { wallet: "0x0000000000000000000000000000000000000000", percent: 50 } // Неверный адрес
+                { wallet: "0x0000000000000000000000000000000000000000", percent: 50 } // Invalid address
             ];
 
             await expect(
